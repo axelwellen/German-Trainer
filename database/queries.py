@@ -46,57 +46,105 @@ def obtener_tags_disponibles():
     tags = db.fetch_all("SELECT nombre FROM tags ORDER BY nombre")
     return [dict(fila) for fila in tags]
 
+def obtener_modos_disponibles():
+    modos = db.fetch_all("SELECT DISTINCT estado AS modo FROM vocabulario_progreso ORDER BY estado")
+    return [dict(fila) for fila in modos]
+
 # --- FUNCIONES DE VOCABULARIO ---
+def crear_placeholders(valores):
+    return ", ".join(["?"] * len(valores))
 
 def buscar_vocabulario(filtros):
-    
-    # query
-    query = "SELECT DISTINCT vocabulario.* FROM vocabulario"
+    query = "SELECT DISTINCT v.* FROM vocabulario v"
+    joins = []
+    where = []
     params = []
-    if filtros["tags"]:
-        query += " JOIN vocabulario_tags ON vocabulario.id = vocabulario_tags.vocabulario_id JOIN tags ON tags.id = vocabulario_tags.tag_id WHERE tags.nombre IN ("
-        for index, tag in enumerate(filtros["tags"]):
-            query += "?"
-            params.append(tag)
-            if index != len(filtros["tags"])-1:
-                query += ", "
-        query += ")"
 
-    if not filtros["tags"] and (filtros["tipos"] or filtros["niveles"]):
-        query += " WHERE"
-    if filtros["niveles"]:
-        if filtros["tags"]:
-            query += " AND"
-        query += " nivel IN ("
-        for index, nivel in enumerate(filtros["niveles"]):
-            query += "?"
-            params.append(nivel)
-            if index != len(filtros["niveles"])-1:
-                query += ", "
-        query += ")"
-    if filtros["tipos"]:
-        if filtros["niveles"] or filtros["tags"]:
-            query += " AND"
-        query += " tipo IN ("
-        for index, tipo in enumerate(filtros["tipos"]):
-            query += "?"
-            params.append(tipo)
-            if index != len(filtros["tipos"])-1:
-                query += ", "
-        query += ")"
-    if filtros["orden"] is not None:
-        if filtros["orden"] == "random":
-            query += " ORDER BY RANDOM()" 
-        elif filtros["orden"] == "tags":
-            query += " ORDER BY tags.nombre"
-        else:
-            query += " ORDER BY vocabulario." + filtros["orden"] 
-    if str(filtros["limite"]).isdigit():
+    niveles = filtros.get("niveles",[])
+    tipos = filtros.get("tipos",[])
+    tags = filtros.get("tags",[])
+    modo_progreso = filtros.get("modo_progreso", "todas")
+    orden = filtros.get("orden",None)
+    limite = filtros.get("limite",20)
+
+    # TAGS
+    if tags:
+        joins.append("""
+            JOIN vocabulario_tags vt ON v.id = vt.vocabulario_id
+            JOIN tags t ON t.id = vt.tag_id
+        """)
+        placeholders = crear_placeholders(tags)
+        where.append(f"t.nombre IN ({placeholders})")
+        params.extend(tags)
+
+    # PROGRESO
+    if modo_progreso != "todas":
+        joins.append("""
+            LEFT JOIN vocabulario_progreso p ON v.id = p.vocabulario_id
+        """)
+        # palabras nunca estudiadas o con estado "nueva"
+        if modo_progreso == "nuevas":
+            where.append("(p.vocabulario_id IS NULL OR p.estado = 'nueva')")
+
+        # palabras que ya tienen fila en vocabulario_progreso
+        elif modo_progreso == "vistas":
+            where.append("p.vocabulario_id IS NOT NULL")
+
+        # palabras con estado aprendiendo
+        elif modo_progreso == "aprendiendo":
+            where.append("p.estado = 'aprendiendo'")
+        
+        # palabras con estado difíciles
+        elif modo_progreso == "dificil":
+            where.append("p.estado = 'dificil'")
+
+        # palabras con estado dominadas
+        elif modo_progreso == "dominada":
+            where.append("p.estado = 'dominada'")
+
+    # --- NIVELES ---
+    if niveles:
+        placeholders = crear_placeholders(niveles)
+        where.append(f"v.nivel IN ({placeholders})")
+        params.extend(niveles)
+
+    # --- TIPOS ---
+    if tipos:
+        placeholders = crear_placeholders(tipos)
+        where.append(f"v.tipo IN ({placeholders})")
+        params.extend(tipos)
+
+    # --- MONTAR QUERY ---
+    if joins:
+        query += " " + " ".join(joins)
+
+    if where:
+        query += " WHERE " + " AND ".join(where)
+
+    # --- ORDEN ---
+    if orden:
+        if orden == "random":
+            query += " ORDER BY RANDOM()"
+
+        elif orden == "tags" and tags:
+            query += " ORDER BY t.nombre"
+
+        elif orden == "prioridad_repaso":
+            if modo_progreso in ["vistas", "aprendiendo", "dificil", "dominada"]:
+                query += " ORDER BY p.peso_repaso DESC"
+            else:
+                query += " ORDER BY RANDOM()"
+        elif orden in ["palabra", "nivel", "tipo"]:
+            query += f" ORDER BY v.{orden}"
+
+    # --- LÍMITE ---
+    if str(limite).isdigit():
         query += " LIMIT ?"
-        params.append(filtros["limite"])
-    filas = db.fetch_all(query,params) 
-    return [dict(fila) for fila in filas] # devolvemos una lista de diccionarios
-    #return query, params
+        params.append(int(limite))
+
+    filas = db.fetch_all(query, params)
+    return [dict(fila) for fila in filas]
+
 
 def obtener_vocabulario_por_id(vocabulario_id):
     fila = db.fetch_one("SELECT * FROM vocabulario WHERE id = ?",[vocabulario_id])
@@ -140,6 +188,7 @@ def obtener_lista_vocabulario_completo(filtros):
     return palab_list
 
 if __name__ == "__main__":
+    print(obtener_niveles_disponibles(),"esta es la función")
     print("Total palabras: ", contar_total_palabras())
     print("Total ejemplos: ", contar_total_ejemplos())
     print("Total tags: ", contar_total_tags())

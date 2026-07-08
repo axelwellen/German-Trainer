@@ -1,13 +1,15 @@
 from database import queries
 from tkinter import *
+from services import vocab_service
 
 # veremos los filtros para generar la lista de vocabulario para estudiar
 estado = {
         "nivel_vars": {},
         "tipo_vars": {},
         "tag_vars": {},
+        "modo_vars": None,
         "limite_var":None,
-        "orden":"random",
+        "orden":"prioridad_repaso", # random, tags, ...
         "start_flashcards_callback": None
         }
 
@@ -38,7 +40,18 @@ def render_filters(filters_frame):
     niveles = queries.obtener_niveles_disponibles()
     tipos = queries.obtener_tipos_disponibles()
     tags = queries.obtener_tags_disponibles()
+    modos = vocab_service.obtener_modos_progreso()
     
+    # MODOS - Solo se puede seleccionar 1 (Radiobuttons)
+    modo_frame = Frame(filters_frame)
+    modo_frame.pack(anchor="w", padx = 20, pady = 10)
+    Label(modo_frame, text = "Progreso:").grid(row=0, column=0, sticky="w")
+    estado["modos_var"] = StringVar(value="todas")
+    for i, item in enumerate(modos):
+        valor = item["valor"]
+        texto = item["texto"]
+        Radiobutton(modo_frame, text=texto, variable = estado["modos_var"], value = valor).grid(row=1, column = i, sticky="w")
+
     # NIVELES
     nivel_frame = Frame(filters_frame)
     nivel_frame.pack(anchor="w", padx = 20, pady = 10)
@@ -99,6 +112,7 @@ def get_selected_filters():
     niveles = []
     tipos = []
     tags = []
+    modos = []
     for nivel, var in estado["nivel_vars"].items():
         if var.get() == 1:
             niveles.append(nivel)
@@ -116,6 +130,7 @@ def get_selected_filters():
             "niveles":niveles, # ["A2", "B1"]
             "tipos": tipos, # ["noun", "verb"]
             "tags": tags, # ["trabajo", "viajes"]
+            "modo_progreso": estado["modos_var"].get(), # "nueva" o "difícil" o ...
             "limite": limite, # 20
             "orden": estado["orden"] # puede ser tags, palabra, random, etc
             }

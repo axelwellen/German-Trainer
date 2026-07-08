@@ -1,4 +1,5 @@
 from tkinter import *
+from services import progress_service as progress_s
 # debemos guardar:
 # palabras, indice_actual, mostrar_significado
 # ej: indice_actual = 0; mostrar_significado = False
@@ -88,6 +89,32 @@ def show_current_card():
     btn_prev.pack(side="left", padx=2, pady=5)
     btn_show_meaning.pack(side = "left", padx=2, pady=5)
     btn_next.pack(side="left", padx=2, pady=5)
+
+    # botones de valoración
+    buttons_progress_frame = Frame(parent_frame)
+    buttons_progress_frame.pack(anchor = "center")
+
+    btn_1 = Button(buttons_progress_frame, text = ":(", command = lambda:actualizar_progreso_y_siguiente(palabra_actual, 1))
+    btn_2 = Button(buttons_progress_frame, text = ":|", command = lambda:actualizar_progreso_y_siguiente(palabra_actual, 2))
+    btn_3 = Button(buttons_progress_frame, text = ":)", command = lambda:actualizar_progreso_y_siguiente(palabra_actual, 3))
+    btn_4 = Button(buttons_progress_frame, text = ":D", command = lambda:actualizar_progreso_y_siguiente(palabra_actual, 4))
+
+    btn_1.config(width = 2, height = 2)
+    btn_2.config(width = 2, height = 2)
+    btn_3.config(width = 2, height = 2)
+    btn_4.config(width = 2, height = 2)
+
+    btn_1.pack(side = "left", padx = 2, pady = 5)
+    btn_2.pack(side = "left", padx = 2, pady = 5)
+    btn_3.pack(side = "left", padx = 2, pady = 5)
+    btn_4.pack(side = "left", padx = 2, pady = 5)
+
+def actualizar_progreso_y_siguiente(palabra, valoracion):
+    progress_s.actualizar_progreso_por_valoracion(palabra["datos"]["id"],valoracion)
+    if estado["indice_actual"] == len(estado["palabras"])-1:
+        go_back_to_vocab()
+    else:
+        next_card()
 
 # aumenta índice y muestra siguiente, si llega al final: 
 # Volver al inicio, o mostrar "fin de lista"

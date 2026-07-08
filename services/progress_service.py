@@ -22,7 +22,7 @@ def calcular_estado(peso_repaso, veces_vista):
     if veces_vista <= 0:
         return "nueva"
     if peso_repaso >= 3.0:
-        return "difícil"
+        return "dificil"
     if peso_repaso <= 0.5:
         return "dominada"
     return "aprendiendo"
