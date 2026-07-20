@@ -34,6 +34,12 @@ def execute_query(query, params=None):
         else:
             cursor.execute(query, params)
 
+# para realizar consultas que modifiquenla base de datos pero con executemany
+def execute_many_query(query, params_list):
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.executemany(query, params_list)
+
 # permite hacer una query que devuelva un resultado
 def fetch_one(query, params=None):
     with get_connection() as connection:
