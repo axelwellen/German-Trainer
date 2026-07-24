@@ -19,13 +19,22 @@ def render_word_editor(parent_frame,vocabulario_id, on_save, on_cancel):
             "sinonimos_entries": [],
             "tags_entries": []
             }
-    # main frame
-    main_frame = Frame(parent_frame)
-    main_frame.pack(fill="both", expand = True, padx = 20, pady = 20)
+    # Contenedor general (para poder tener scroll)
+    editor_container = Frame(parent_frame) 
+    editor_container.pack(fill="both", expand = True)
+    
+    # Zona superior con scroll
+    scroll_frame = crear_scrollable_frame(editor_container)
+    scroll_frame.pack(fill="both", expand = True)
 
-    render_header(main_frame, palabra_completa)
-    render_body(main_frame, editor_state)
-    render_buttons(main_frame, editor_state, vocabulario_id, on_save, on_cancel)
+    # Contenido real dentro del scroll
+    content_frame = scroll_frame.content_frame
+
+    render_header(content_frame, palabra_completa)
+    render_body(content_frame, editor_state)
+    
+    # botones fuera del scroll siempre visibles
+    render_buttons(editor_container, editor_state, vocabulario_id, on_save, on_cancel)
 
 def save(editor_state, vocabulario_id, on_save):
     
@@ -81,6 +90,10 @@ def save(editor_state, vocabulario_id, on_save):
                 })
     palabra_completa["ejemplos"] = ejemplos
     
+    # tags
+    palabra_completa["tags"] = editor_state["tags_entries"] # ya están escritos
+
+    # guardar vocabulario
     edit_queries.guardar_vocabulario_completo(vocabulario_id, palabra_completa)
     # llama a on_save que es actualizar_palabra_editada dentro de flashcard
     on_save(vocabulario_id)
@@ -98,35 +111,46 @@ def render_body(parent_frame, editor_state):
     palabra_completa = editor_state["palabra_completa"]
 
     body_frame = Frame(parent_frame)
-    body_frame.pack(anchor = "w", padx = 20, pady = 10, fill="x")
+    body_frame.pack(expand = True, padx = 20, pady = 10, fill="both")
     
     # configuramos dos columnas princpales
     body_frame.columnconfigure(0, weight = 1)
     body_frame.columnconfigure(1, weight = 1)
 
-    datos_frame = LabelFrame(body_frame, text="Datos básicos", padx = 10, pady = 10)
-    notas_frame = LabelFrame(body_frame, text="Notas",padx = 10, pady = 10)
+    left_column = Frame(body_frame)
+    right_column = Frame(body_frame)
 
-    datos_frame.grid(row=0, column = 0, sticky = "nsew", padx = 10, pady = 10)
-    notas_frame.grid(row=0, column = 1, sticky = "nsew", padx = 10, pady = 10)
+    left_column.grid(row= 0, column = 0, sticky = "nsew", padx = (0,10))
+    right_column.grid(row = 0, column = 1, sticky = "nsew", padx = (0,10))
+
+    datos_frame = LabelFrame(left_column, text="Datos básicos", padx = 10, pady = 10)
+    notas_frame = LabelFrame(right_column, text="Notas",padx = 10, pady = 10)
+
+    datos_frame.pack(fill="x", pady = 10)
+    notas_frame.pack(fill="x", pady = 10)
 
     render_datos_basicos(datos_frame, editor_state, palabra_completa["datos"])
     render_notas(notas_frame, editor_state, palabra_completa["datos"])
     
-    significados_frame = LabelFrame(body_frame, text = "Significados", padx = 10, pady = 10)
-    significados_frame.grid(row = 1, column = 0, sticky = "nsew", padx = 10, pady = 10)
+    significados_frame = LabelFrame(right_column, text = "Significados", padx = 10, pady = 10)
+    significados_frame.pack(fill="x", pady = 10)
 
     render_significados(significados_frame, editor_state, palabra_completa["significados"])
 
-    sinonimos_frame = LabelFrame(body_frame, text = "Sinónimos", padx = 10, pady = 10)
-    sinonimos_frame.grid(row = 2, column = 0, sticky = "nsew", padx = 10, pady = 10)
+    sinonimos_frame = LabelFrame(right_column, text = "Sinónimos", padx = 10, pady = 10)
+    sinonimos_frame.pack(fill="x", pady = 10)
 
     render_sinonimos(sinonimos_frame, editor_state, palabra_completa["sinonimos"])
 
-    ejemplos_frame = LabelFrame(body_frame, text = "Ejemplos", padx = 10, pady = 10)
-    ejemplos_frame.grid(row = 1, column = 1, sticky = "nsew", padx = 10, pady = 10)
+    ejemplos_frame = LabelFrame(left_column, text = "Ejemplos", padx = 10, pady = 10)
+    ejemplos_frame.pack(fill="x", pady = 10)
 
     render_ejemplos(ejemplos_frame, editor_state, palabra_completa["ejemplos"])
+
+    tags_frame = LabelFrame(right_column, text = "Tags", padx = 10, pady = 10)
+    tags_frame.pack(fill="x", pady = 10)
+
+    render_tags(tags_frame, editor_state, palabra_completa["tags"])
 
 def crear_entry(parent, label_text, value, row, column, width=18, disabled = False):
     Label(parent, text=label_text).grid(row=row, column = column, sticky = "w", padx = 5, pady = (5,0))
@@ -226,6 +250,31 @@ def render_sinonimos(parent_frame, editor_state, sinonimos):
     # incluimos un botón abajo que nos crea un nuevo Entry vacío
     Button(parent_frame, text = "+ Añadir sinónimo", command = lambda: add_sinonimo_row(rows_frame, editor_state, "")).pack(anchor="w", pady=5)
 
+def render_tags(parent_frame, editor_state, tags):
+    tags_frame = Frame(parent_frame)
+    tags_frame.pack(fill="x", expand = True)
+    
+    editor_state["tags_entries"] = []
+
+    for tag in tags:
+        # por cada tag creamos un Label
+        add_tag(tags_frame, editor_state, tag)
+
+    # abajo el entry y el botón que nos permitirá añadir más tags
+    entry_tag = Entry(parent_frame)
+    entry_tag.pack(fill = "x", expand = True, pady = (8,5))
+    
+    # si queremos añadir tag usaremos add_tag, pero tenemos que leer el contenido y borrar el entry
+    def crear_tag_desde_entry():
+        texto = entry_tag.get().strip().lower()
+        if texto: 
+            add_tag(tags_frame, editor_state, texto)
+            entry_tag.delete(0,"end")
+
+    Button(parent_frame, text = "+ Añadir Tag", command = crear_tag_desde_entry).pack(anchor = "w", pady = 5)
+    # función recomendada por ChatGPT para darle al enter, no solo al botón: 
+    entry_tag.bind("<Return>", lambda event: crear_tag_desde_entry())
+
 def render_ejemplos(parent_frame, editor_state, ejemplos):
     rows_frame = Frame(parent_frame)
     rows_frame.pack(fill="both", expand=True)
@@ -301,6 +350,23 @@ def add_sinonimo_row(parent_frame, editor_state, valor = ""):
     # Creamos el botón para eliminar el Entry, llama a eliminar_sinonimo_row
     Button(row_frame, text = "X", command = lambda: eliminar_sinonimo_row(row_frame, entry, editor_state)).pack(side="left")
 
+def add_tag(parent_frame, editor_state, tag):
+    tag = tag.strip().lower()
+
+    if not tag:
+        return
+    # si existe ya
+    if tag in editor_state["tags_entries"]:
+        return
+
+    chip_frame = Frame(parent_frame, relief = "ridge", borderwidth = 1)
+    chip_frame.pack(anchor = "w", pady = 3)
+
+    Label(chip_frame, text = tag, width = 14, anchor = "w").pack(side="left", padx = (6,2), pady = 2)
+
+    Button(chip_frame, text = "x", width = 2, height = 1, padx = 0, pady = 0, borderwidth = 1, command = lambda: eliminar_tag(chip_frame, editor_state, tag)).pack(side="left", padx = (2,4), pady = 2)
+    editor_state["tags_entries"].append(tag)
+
 def eliminar_significado_row(parent_frame, entry, editor_state):
     if entry in editor_state["significados_entries"]:
         # eliminamos el significado en caso de que estuviera en el editor_state
@@ -318,6 +384,11 @@ def eliminar_ejemplo_row(ejemplo_widgets, editor_state):
         editor_state["ejemplos_widgets"].remove(ejemplo_widgets)
     ejemplo_widgets["frame"].destroy()
 
+def eliminar_tag(chip_frame, editor_state, tag):
+    if tag in editor_state["tags_entries"]:
+        editor_state["tags_entries"].remove(tag)
+    chip_frame.destroy()
+
 def render_buttons(parent_frame, editor_state, vocabulario_id, on_save, on_cancel):
     
     botones_frame = Frame(parent_frame)
@@ -327,6 +398,57 @@ def render_buttons(parent_frame, editor_state, vocabulario_id, on_save, on_cance
 
     Button(botones_frame, text = "Cancelar", command =on_cancel).pack(side="left", padx=5)
 
-   
+# Barra de Scroll creada por ChatGPT 
+def crear_scrollable_frame(parent_frame):
+    container = Frame(parent_frame)
+    container.pack(fill="both", expand=True)
 
+    canvas = Canvas(container)
+    scrollbar = Scrollbar(container, orient="vertical", command=canvas.yview)
 
+    content_frame = Frame(canvas)
+
+    content_frame.bind(
+        "<Configure>",
+        lambda event: canvas.configure(
+            scrollregion=canvas.bbox("all")
+        )
+    )
+
+    canvas_window = canvas.create_window(
+        (0, 0),
+        window=content_frame,
+        anchor="nw"
+    )
+
+    def ajustar_ancho(event):
+        canvas.itemconfig(canvas_window, width=event.width)
+
+    def on_mousewheel(event):
+        # Windows / algunos entornos
+        if event.delta:
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def on_mousewheel_linux_up(event):
+        canvas.yview_scroll(-3, "units")
+
+    def on_mousewheel_linux_down(event):
+        canvas.yview_scroll(3, "units")
+
+    canvas.bind("<Configure>", ajustar_ancho)
+
+    # Windows
+    canvas.bind_all("<MouseWheel>", on_mousewheel)
+
+    # Linux / WSL
+    canvas.bind_all("<Button-4>", on_mousewheel_linux_up)
+    canvas.bind_all("<Button-5>", on_mousewheel_linux_down)
+
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    container.content_frame = content_frame
+
+    return container
