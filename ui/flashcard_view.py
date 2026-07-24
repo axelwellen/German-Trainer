@@ -1,5 +1,7 @@
 from tkinter import *
 from services import progress_service as progress_s
+from ui import word_editor_view
+from database import queries
 # debemos guardar:
 # palabras, indice_actual, mostrar_significado
 # ej: indice_actual = 0; mostrar_significado = False
@@ -85,9 +87,12 @@ def show_current_card():
     btn_show_meaning.config(width = 15, height = 2)
     btn_next.config(width = 15, height = 2)
     btn_prev.config(width = 15, height = 2)
-    
+    btn_edit = Button(buttons_frame, text = "Editar palabra", command = lambda: abrir_editor_palabra(palabra_actual))
+    btn_edit.config(width = 15, height = 2)
+
     btn_prev.pack(side="left", padx=2, pady=5)
     btn_show_meaning.pack(side = "left", padx=2, pady=5)
+    btn_edit.pack(side = "left", padx = 2, pady = 5)
     btn_next.pack(side="left", padx=2, pady=5)
 
     # botones de valoración
@@ -108,6 +113,7 @@ def show_current_card():
     btn_2.pack(side = "left", padx = 2, pady = 5)
     btn_3.pack(side = "left", padx = 2, pady = 5)
     btn_4.pack(side = "left", padx = 2, pady = 5)
+
 
 def actualizar_progreso_y_siguiente(palabra, valoracion):
     progress_s.actualizar_progreso_por_valoracion(palabra["datos"]["id"],valoracion)
@@ -224,3 +230,22 @@ def render_extra_section(parent_frame, palabra):
 # Se tendrá que pasar como parámetro la función y el callback
 def go_back_to_vocab():
     estado["start_vocab_callback"]()
+
+def actualizar_palabra_editada(vocabulario_id):
+    palabra_actualizada = queries.obtener_vocabulario_completo(vocabulario_id)
+
+    indice = estado["indice_actual"]
+    estado["palabras"][indice] = palabra_actualizada
+
+    show_current_card()
+
+def abrir_editor_palabra(palabra):
+    vocabulario_id = palabra["datos"]["id"]
+
+    word_editor_view.render_word_editor(
+            parent_frame = estado["parent_frame"],
+            vocabulario_id = vocabulario_id, 
+            on_save = actualizar_palabra_editada,
+            on_cancel = show_current_card
+            )
+

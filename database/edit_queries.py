@@ -111,6 +111,18 @@ def reemplazar_sinonimos(vocabulario_id, sinonimos_ids):
     insert_query = "INSERT INTO sinonimos (vocabulario_id, sinonimo) VALUES (?,?)"
     db.execute_many_query(insert_query, params) 
 
+# la estructura es la que tenemos siempre, diccionario de: datos, significados, ejemplos, sinonimos, tags
+def guardar_vocabulario_completo(vocabulario_id, vocabulario_completo):
+    # llamamos a actualizar_vocabulario_basico
+    actualizar_vocabulario_basico(vocabulario_id, vocabulario_completo["datos"])
+    # llamamos a reemplazar significados
+    reemplazar_significados(vocabulario_id, vocabulario_completo["significados"])
+    # llamamos a reemplazar_ejemplos
+    reemplazar_ejemplos(vocabulario_id, vocabulario_completo["ejemplos"])
+    # llamamos a reemplazar tags
+    reemplazar_tags(vocabulario_id, vocabulario_completo["tags"])
+    # llamamos a reemplazar_sinonimos
+    reemplazar_sinonimos(vocabulario_id, vocabulario_completo["sinonimos"])
 
 if __name__ == "__main__":
 #     vocabulario_id = "v_aufessen"
@@ -150,3 +162,38 @@ if __name__ == "__main__":
     reemplazar_tags("v_neugierig", tags)
     sinonimos = ["v_unantastbar"]
     reemplazar_sinonimos("v_heilig", sinonimos)
+
+    vocabulario_completo = {
+            'datos': 
+            {
+                'id': 'v_aufessen',
+                'palabra': 'aufessen', 
+                'tipo': 'verb', 
+                'nivel': 'B1', 
+                'notas': '"Verbo separable: ich esse auf, du isst auf, er isst auf; Perfekt: hat aufgegessen."', 
+                'genero': None, 
+                'plural': None, 
+                'preterito': "aß auf", 
+                'perfekt': "aufgegessen", 
+                'auxiliar': "haben", 
+                'reflexivo': 0, 
+                'separable': 0, 
+                'preposicion': None, 
+                'caso': None
+                }, 
+            'significados': ['comerse todo', 'terminar de comer', 'finalizar la comida'], 
+            'ejemplos': [
+                {
+                    'ejemplo_de': 'Iss bitte deinen Teller auf!', 
+                    'ejemplo_es': '¡Cómete todo el plato, por favor!'
+                    },
+                {
+                    'ejemplo_de': 'Iss deine Suppe auf!',
+                    'ejemplo_es': 'Termínate la sopa!'
+                    }
+                ], 
+            'sinonimos': ["v_auffuttern","v_verzehren"], 
+            'tags': ['alltag', 'essen', 'comida']
+            }
+    guardar_vocabulario_completo("v_aufessen", vocabulario_completo)
+
