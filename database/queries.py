@@ -51,9 +51,15 @@ def obtener_modos_disponibles():
     return [dict(fila) for fila in modos]
 
 # --- FUNCIONES DE VOCABULARIO ---
+
+def existe_vocabulario_id(vocabulario_id):
+    """ Función que devuelve True si existe el id en la BBDD o False si no existe """
+    vocab = db.fetch_one("SELECT 1 FROM vocabulario WHERE id = ?",[vocabulario_id])
+    return vocab is not None
+
 def crear_placeholders(valores):
     return ", ".join(["?"] * len(valores))
-
+    
 def buscar_vocabulario(filtros):
     query = "SELECT DISTINCT v.* FROM vocabulario v"
     joins = []

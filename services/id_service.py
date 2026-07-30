@@ -1,4 +1,5 @@
 import re
+from database import queries
 
 # Limpia la palabra (un solo espacio, quitar signos raros, minúsculas)
 def normalizar_para_id(texto):
@@ -25,8 +26,31 @@ def generar_id_base(palabra):
         palabra = palabra.replace(car,sus)
     return("v_" + palabra)
 
+def generar_id_disponible(palabra):
+    """ 
+    Genera un ID disponible para una palabra
+    - si v_umfahren no existe -> v_umfahren
+    - si v_umfahren existe -> v_umfahren_2
+    - si v_umfahren existe -> v_umfahren_3
+    """
+    id_provisional = generar_id_base(palabra)
+    # si no existe lo devolvemos
+    if not queries.existe_vocabulario_id(id_provisional):
+        return id_provisional
+
+    i = 2
+    # si existe, le añadimos _X hasta que haya uno que no exista
+    while queries.existe_vocabulario_id(f"{id_provisional}_{i}"):
+        i += 1
+    return f"{id_provisional}_{i}"
+
+
 if __name__ == "__main__":
     #texto = "Geschäftsidee"
     texto = "sich kümmern um"
     #texto = "in Bezug auf"
     print(generar_id_base(texto))
+    palabra = "Menge"
+
+    print(generar_id_disponible(palabra))
+    print(generar_id_disponible(texto))
