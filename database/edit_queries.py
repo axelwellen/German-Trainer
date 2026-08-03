@@ -1,5 +1,7 @@
 from database import queries
 from database import db
+from services import id_service
+
 # actualiza la tabla de vocabulario a partir del id y de los datos que teníamos. 
 # Debe existir el vocabulario_id, sino usaremos la función crear_vocabulario_básico
 def actualizar_vocabulario_basico(vocabulario_id, datos):
@@ -39,6 +41,34 @@ def actualizar_vocabulario_basico(vocabulario_id, datos):
         ]        
 
     db.execute_query(query,params)
+
+def crear_vocabulario_basico(datos):
+    """
+        Esta función es similar a la de actualizar_vocabulario_basico(vocabulario_id, datos)
+        Pero en este caso tendremos que llamar a la función generar_id_disponible de services/id_service
+        Devuelve el id generado
+    """
+    query = "INSERT INTO vocabulario (id, palabra, tipo, nivel, notas, genero, plural, preterito, perfekt, auxiliar, reflexivo, separable, preposicion, caso) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+
+    id_palabra = id_service.generar_id_disponible(datos["palabra"])
+    params = [
+            id_palabra,
+            datos["palabra"],
+            datos["tipo"],
+            datos.get("nivel"),
+            datos.get("notas"),
+            datos.get("genero"),
+            datos.get("plural"),
+            datos.get("preterito"),
+            datos.get("perfekt"),
+            datos.get("auxiliar"),
+            datos.get("reflexivo"),
+            datos.get("separable"),
+            datos.get("preposicion"),
+            datos.get("caso"),   
+        ]
+    db.execute_query(query, params)
+    return id_palabra
 
 # Función para reemplazar los significados de una palabra
 def reemplazar_significados(vocabulario_id, significados):
@@ -124,6 +154,23 @@ def guardar_vocabulario_completo(vocabulario_id, vocabulario_completo):
     # llamamos a reemplazar_sinonimos
     reemplazar_sinonimos(vocabulario_id, vocabulario_completo["sinonimos"])
 
+def crear_vocabulario_completo(vocabulario_completo):
+    """
+        Función que añade una palabra a la BBDD a partir de todos sus datos
+    """
+    # llamamos a crear_vocabulario_basico():
+    vocabulario_id = crear_vocabulario_basico(vocabulario_completo["datos"])
+    vocabulario_completo["datos"]["id"] = vocabulario_id
+    # llamamos a reemplazar significados
+    reemplazar_significados(vocabulario_id, vocabulario_completo["significados"])
+    # llamamos a reemplazar_ejemplos
+    reemplazar_ejemplos(vocabulario_id, vocabulario_completo["ejemplos"])
+    # llamamos a reemplazar tags
+    reemplazar_tags(vocabulario_id, vocabulario_completo["tags"])
+    # llamamos a reemplazar_sinonimos
+    reemplazar_sinonimos(vocabulario_id, vocabulario_completo["sinonimos"])
+
+
 if __name__ == "__main__":
 #     vocabulario_id = "v_aufessen"
 #     datos_completos = queries.obtener_vocabulario_completo(vocabulario_id)
@@ -156,12 +203,12 @@ if __name__ == "__main__":
 #     reemplazar_ejemplos("v_abfahren", ejemplos)
 #     print("Ejemplos modificados")
 #     print(queries.obtener_vocabulario_completo("v_abfahren"))
-
-    print(obtener_o_crear_tag("amigos"))
-    tags=["alltag", "essen", "arbeit", "politik", "tiempo_libre"]
-    reemplazar_tags("v_neugierig", tags)
-    sinonimos = ["v_unantastbar"]
-    reemplazar_sinonimos("v_heilig", sinonimos)
+# 
+#     print(obtener_o_crear_tag("amigos"))
+#     tags=["alltag", "essen", "arbeit", "politik", "tiempo_libre"]
+#     reemplazar_tags("v_neugierig", tags)
+#     sinonimos = ["v_unantastbar"]
+#     reemplazar_sinonimos("v_heilig", sinonimos)
 
     vocabulario_completo = {
             'datos': 
@@ -177,7 +224,7 @@ if __name__ == "__main__":
                 'perfekt': "aufgegessen", 
                 'auxiliar': "haben", 
                 'reflexivo': 0, 
-                'separable': 0, 
+                'separable': 1, 
                 'preposicion': None, 
                 'caso': None
                 }, 
@@ -195,5 +242,5 @@ if __name__ == "__main__":
             'sinonimos': ["v_auffuttern","v_verzehren"], 
             'tags': ['alltag', 'essen', 'comida']
             }
-    guardar_vocabulario_completo("v_aufessen", vocabulario_completo)
+    crear_vocabulario_completo(vocabulario_completo)
 
